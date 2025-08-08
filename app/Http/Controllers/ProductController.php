@@ -97,6 +97,14 @@ class ProductController extends Controller
      */
     public function destroy(Product $product)
     {
-        //
+        if ($product->user_id != auth('api')->user()->id) {
+            return response()->json([
+                'message' => 'No tienes permiso para eliminar este producto',
+            ], 403);
+        }
+        $product->delete();
+        return response()->json([
+            'message' => 'Producto eliminado correctamente',
+        ], 200);
     }
 }
