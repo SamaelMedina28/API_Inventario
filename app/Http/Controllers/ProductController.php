@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Product;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Validator;
 
 class ProductController extends Controller
 {
@@ -12,7 +13,7 @@ class ProductController extends Controller
      */
     public function index()
     {
-        $product = Product::orderBy('id', 'desc')->where('user_id', auth('api')->user()->id)->get();
+        $product = Product::orderBy('id', 'desc')->where('user_id', auth('api')->user()->id)->with('category')->get();
         if ($product->isEmpty()) {
             return response()->json([
                 'message' => 'No hay productos',
@@ -24,19 +25,29 @@ class ProductController extends Controller
     }
 
     /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
-    {
-        //
-    }
-
-    /**
      * Store a newly created resource in storage.
      */
     public function store(Request $request)
     {
-        //
+        // Validaciones
+        $validaciones = Validator::make($request->all(), [
+            'name' => 'required|string|max:255',
+            'price' => 'required|numeric',
+            'category_id' => 'required|exists:categories,id',
+        ]);
+
+        if ($validaciones->fails()) {
+            return response()->json($validaciones->errors(), 422);
+        }
+
+        $product = Product::create([
+            'user_id' => auth('api')->user()->id,
+            'name' => $request->name,
+            'price' => $request->price,
+            'category_id' => $request->category_id,
+        ]);
+
+        return response()->json($product, 201);
     }
 
     /**
