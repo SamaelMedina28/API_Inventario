@@ -55,7 +55,14 @@ class ProductController extends Controller
      */
     public function show(Product $product)
     {
-        //
+        if ($product->user_id != auth('api')->user()->id) {
+            return response()->json([
+                'message' => 'No tienes permiso para ver este producto',
+            ], 403);
+        }
+        return response()->json([
+            'producto' => $product,
+        ], 200);
     }
 
     /**
