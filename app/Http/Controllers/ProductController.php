@@ -66,19 +66,30 @@ class ProductController extends Controller
     }
 
     /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(Product $product)
-    {
-        //
-    }
-
-    /**
      * Update the specified resource in storage.
      */
     public function update(Request $request, Product $product)
     {
-        //
+        if ($product->user_id != auth('api')->user()->id) {
+            return response()->json([
+                'message' => 'No tienes permiso para actualizar este producto',
+            ], 403);
+        }
+        $validaciones = Validator::make($request->all(), [
+            'name' => 'sometimes|required|string|max:255',
+            'price' => 'sometimes|required|numeric',
+            'comment' => 'sometimes|nullable|string|max:500',
+            'category_id' => 'sometimes|required|exists:categories,id',
+        ]);
+
+        if ($validaciones->fails()) {
+            return response()->json($validaciones->errors(), 422);
+        }
+
+        $product->update($request->all());
+        return response()->json([
+            'producto' => $product,
+        ], 200);
     }
 
     /**
