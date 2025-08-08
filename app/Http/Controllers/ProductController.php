@@ -12,7 +12,15 @@ class ProductController extends Controller
      */
     public function index()
     {
-        //
+        $product = Product::orderBy('id', 'desc')->where('user_id', auth('api')->user()->id)->get();
+        if ($product->isEmpty()) {
+            return response()->json([
+                'message' => 'No hay productos',
+            ], 404);
+        }
+        return response()->json([
+            'productos' => $product,
+        ], 200);
     }
 
     /**

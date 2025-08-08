@@ -2,7 +2,7 @@
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CategoryController;
-use Illuminate\Http\Request;
+use App\Http\Controllers\ProductController;
 use Illuminate\Support\Facades\Route;
 
 Route::controller(AuthController::class)->group(function () {
@@ -17,4 +17,5 @@ Route::middleware(['auth'])->group(function () {
     });
 
     Route::apiResource('categories', CategoryController::class);
+    Route::apiResource('products', ProductController::class);
 });
