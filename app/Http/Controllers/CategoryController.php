@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Category;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Validator;
 
 class CategoryController extends Controller
 {
@@ -12,15 +13,15 @@ class CategoryController extends Controller
      */
     public function index()
     {
-        //
-    }
-
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
-    {
-        //
+        $category = Category::orderBy('id', 'desc')->where('user_id', auth('api')->user()->id)->get();
+        if ($category->isEmpty()) {
+            return response()->json([
+                'message' => 'No hay categorias',
+            ], 404);
+        }
+        return response()->json([
+            'categorias' => $category,
+        ], 200);
     }
 
     /**
@@ -28,7 +29,20 @@ class CategoryController extends Controller
      */
     public function store(Request $request)
     {
-        //
+        $validaciones = Validator::make($request->all(), [
+            'name' => 'required|string|max:255',
+        ]);
+
+        if ($validaciones->fails()) {
+            return response()->json($validaciones->errors(), 422);
+        }
+
+        $category = Category::create([
+            'user_id' => auth('api')->user()->id,
+            'name' => $request->name,
+        ]);
+
+        return response()->json($category, 201);
     }
 
     /**
@@ -36,15 +50,14 @@ class CategoryController extends Controller
      */
     public function show(Category $category)
     {
-        //
-    }
-
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(Category $category)
-    {
-        //
+        if ($category->user_id != auth('api')->user()->id) {
+            return response()->json([
+                'message' => 'No tienes permiso para ver esta categoria',
+            ], 403);
+        }
+        return response()->json([
+            'categoria' => $category,
+        ], 200);
     }
 
     /**
@@ -52,7 +65,25 @@ class CategoryController extends Controller
      */
     public function update(Request $request, Category $category)
     {
-        //
+        if ($category->user_id != auth('api')->user()->id) {
+            return response()->json([
+                'message' => 'No tienes permiso para actualizar esta categoria',
+            ], 403);
+        }
+        $validaciones = Validator::make($request->all(), [
+            'name' => 'required|string|max:255',
+        ]);
+
+        if ($validaciones->fails()) {
+            return response()->json($validaciones->errors(), 422);
+        }
+
+        $category->update([
+            'user_id' => auth('api')->user()->id,
+            'name' => $request->name,
+        ]);
+
+        return response()->json($category, 200);
     }
 
     /**
@@ -60,6 +91,15 @@ class CategoryController extends Controller
      */
     public function destroy(Category $category)
     {
-        //
+        if ($category->user_id != auth('api')->user()->id) {
+            return response()->json([
+                'message' => 'No tienes permiso para eliminar esta categoria',
+            ], 403);
+        }
+        $category->delete();
+
+        return response()->json([
+            'message' => 'Categoria eliminada correctamente',
+        ], 200);
     }
 }
