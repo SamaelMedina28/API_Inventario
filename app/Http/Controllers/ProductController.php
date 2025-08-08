@@ -11,16 +11,30 @@ class ProductController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
-        $product = Product::orderBy('id', 'desc')->where('user_id', auth('api')->user()->id)->with('category')->get();
-        if ($product->isEmpty()) {
+        // Obtener todos los productos del usuario autenticado con posibles filtros
+        $products = Product::with('category') 
+            ->where('user_id', auth('api')->id()) 
+            ->when($request->filled('search'), function ($query) use ($request) { 
+                $query->where(function ($subQuery) use ($request) { 
+                    $subQuery->where('name', 'LIKE', "%{$request->search}%")->orWhere('comment', 'LIKE', "%{$request->search}%"); 
+                });
+            })
+            ->when($request->filled('category_id'), function ($query) use ($request) { 
+                $query->where('category_id', $request->category_id); 
+            })
+            ->orderByDesc('id') 
+            ->get();
+
+        if ($products->isEmpty()) {
             return response()->json([
-                'message' => 'No hay productos',
+                'message' => 'No se encontraron productos',
             ], 404);
         }
+
         return response()->json([
-            'productos' => $product,
+            'productos' => $products,
         ], 200);
     }
 
