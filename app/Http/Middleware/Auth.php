@@ -21,6 +21,7 @@ class Auth
         }
         return response()->json([
             'message' => 'No autenticado, no estas logueado',
+            'status' => 401,
         ], 401);
     }
 }

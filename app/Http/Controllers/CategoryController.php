@@ -30,11 +30,13 @@ class CategoryController extends Controller
     public function store(Request $request)
     {
         $validaciones = Validator::make($request->all(), [
-            'name' => 'required|string|max:255',
+            'name' => 'required|string|min:3|max:255',
         ]);
 
         if ($validaciones->fails()) {
-            return response()->json($validaciones->errors(), 422);
+            return response()->json([
+                'errors' => $validaciones->errors(),
+            ], 422);
         }
 
         $category = Category::create([
@@ -75,7 +77,9 @@ class CategoryController extends Controller
         ]);
 
         if ($validaciones->fails()) {
-            return response()->json($validaciones->errors(), 422);
+            return response()->json([
+                'errors' => $validaciones->errors(),
+            ], 422);
         }
 
         $category->update([

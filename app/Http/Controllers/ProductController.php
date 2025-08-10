@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Category;
 use App\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
@@ -25,7 +26,7 @@ class ProductController extends Controller
                 $query->where('category_id', $request->category_id); 
             })
             ->orderByDesc('id') 
-            ->get();
+            ->paginate(10);
 
         if ($products->isEmpty()) {
             return response()->json([
@@ -35,6 +36,7 @@ class ProductController extends Controller
 
         return response()->json([
             'productos' => $products,
+            'categorias' => Category::where('user_id', auth('api')->id())->get(),
         ], 200);
     }
 
