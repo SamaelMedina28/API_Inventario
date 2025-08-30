@@ -6,6 +6,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
+use Tymon\JWTAuth\Facades\JWTAuth;
 
 class AuthController extends Controller
 {
@@ -52,16 +53,29 @@ class AuthController extends Controller
         $credentials = $request->only('email', 'password');
 
         try {
-            $token = auth('api')->attempt($credentials);
-            
+            $token = JWTAuth::attempt($credentials);
+
             if (!$token) {
                 return response()->json([
                     'message' => 'Credenciales inválidas',
                 ], 401);
             }
+
+            $user = JWTAuth::user();
+
             return response()->json([
-                'token' => $token,
-            ], 200);
+                'user' => $user
+            ], 200)->cookie(
+                'auth_token',
+                $token,
+                config('jwt.ttl'),
+                '/',
+                null,
+                true, // Secure
+                true, // HttpOnly
+                false,
+                'Strict'
+            );
         } catch (\Throwable $th) {
             return response()->json([
                 'message' => 'Error al iniciar sesión', $th->getMessage()
@@ -70,23 +84,99 @@ class AuthController extends Controller
     }
 
     // Get user
-    public function getUser()
+    public function getUser(Request $request)
     {
-        $user = auth('api')->user();
+        // Intentar obtener el token de la cookie
+        $token = $request->cookie('auth_token');
 
-        return response()->json([
-            'user' => $user,
-        ], 200);
+        if (!$token) {
+            return response()->json([
+                'message' => 'Token no encontrado',
+            ], 401);
+        }
+
+        try {
+            // Establecer el token en el guard para que pueda obtener el usuario
+            JWTAuth::setToken($token);
+            $user = JWTAuth::user();
+
+            if (!$user) {
+                return response()->json([
+                    'message' => 'Usuario no encontrado o token inválido',
+                ], 401);
+            }
+
+            return response()->json([
+                'user' => $user,
+            ], 200);
+        } catch (\Throwable $th) {
+            return response()->json([
+                'message' => 'Token inválido o expirado',
+            ], 401);
+        }
     }
 
     // Logout
-    public function logout()
+    public function logout(Request $request)
     {
-        auth('api')->logout();
+        $token = $request->cookie('auth_token');
+
+        if ($token) {
+            try {
+                JWTAuth::setToken($token)->logout();
+            } catch (\Throwable $th) {
+                // Si hay error al hacer logout del token, continuamos para limpiar la cookie
+            }
+        }
 
         return response()->json([
             'message' => 'Cierre de sesión exitoso',
             'status' => 200,
-        ], 200);
+        ], 200)->cookie(
+            'auth_token',
+            '', // Valor vacío
+            -1, // Tiempo negativo para expirar inmediatamente
+            '/',
+            null,
+            true,
+            true,
+            false,
+            'Strict'
+        );
+    }
+
+    // Método adicional para refrescar el token
+    public function refresh(Request $request)
+    {
+        $token = $request->cookie('auth_token');
+
+        if (!$token) {
+            return response()->json([
+                'message' => 'Token no encontrado',
+            ], 401);
+        }
+
+        try {
+            JWTAuth::setToken($token);
+            $newToken = JWTAuth::refresh($token);
+
+            return response()->json([
+                'message' => 'Token refrescado exitosamente',
+            ], 200)->cookie(
+                'auth_token',
+                $newToken,
+                config('jwt.ttl'),
+                '/',
+                null,
+                true,
+                true,
+                false,
+                'Strict'
+            );
+        } catch (\Throwable $th) {
+            return response()->json([
+                'message' => 'Error al refrescar token',
+            ], 401);
+        }
     }
 }
